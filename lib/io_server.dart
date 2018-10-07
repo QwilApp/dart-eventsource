@@ -2,11 +2,10 @@ library eventsource.io_server;
 
 import "dart:io" as io;
 
-import "package:sync/waitgroup.dart";
-
 import "publisher.dart";
 import "src/event.dart";
 import "src/encoder.dart";
+import 'src/waitgroup.dart';
 
 /// Create a handler to serve [io.HttpRequest] objects for the specified
 /// channel.

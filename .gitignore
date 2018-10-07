@@ -16,8 +16,12 @@ pubspec.lock.old
 # Directory created by dartdoc
 doc/api/
 
-# JetBrains IDEs
+# IDEs
+.vscode/
 .idea/
 *.iml
 *.ipr
 *.iws
+
+# other
+.dart-tool/

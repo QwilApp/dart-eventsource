@@ -1,6 +1,7 @@
 library eventsource.src.cache;
 
 import "package:collection/collection.dart";
+import 'package:eventsource/src/proxy_sink.dart';
 
 import "event.dart";
 
@@ -12,7 +13,7 @@ class EventCache {
 
   EventCache({this.cacheCapacity, this.comparableIds: true});
 
-  void replay(Sink<Event> sink, String lastEventId, [String channel = ""]) {
+  void replay(ProxySink<Event> sink, String lastEventId, [String channel = ""]) {
     List<Event> cache = _caches[channel];
     if (cache == null || cache.isEmpty) {
       // nothing to replay
