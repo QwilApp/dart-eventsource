@@ -104,7 +104,7 @@ class EventSource extends Stream<Event> {
     var request = new http.Request("GET", url);
     request.headers["Cache-Control"] = "no-cache";
     request.headers["Accept"] = "text/event-stream";
-    if (_lastEventId.isNotEmpty) {
+    if (_lastEventId != null && _lastEventId.isNotEmpty) {
       request.headers["Last-Event-ID"] = _lastEventId;
     }
     if(_cookies != null && _cookies.length > 0) {
