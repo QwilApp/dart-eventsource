@@ -91,8 +91,9 @@ class EventSource extends Stream<Event> {
     _streamController.stream.listen(onData,
         onError: onError, onDone: onDone, cancelOnError: cancelOnError);
   
-  StreamSubscription<EventSourceReadyState> listenState(void onData(EventSourceReadyState event)) =>
-    _stateController.stream.listen(onData, cancelOnError: false);
+  Stream<EventSourceReadyState> get readyState$ {
+    return _stateController.stream;
+  }
 
   /// Attempt to start a new connection.
   Future _start() async {
