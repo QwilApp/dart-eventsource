@@ -126,18 +126,22 @@ class EventSource extends Stream<Event> {
     _readyState = EventSourceReadyState.OPEN;
     _stateController.add(_readyState);
     // start streaming the data
-    response.stream.transform(_decoder).timeout(_timeout).listen((Event event) {
-      _streamController.add(event);
-      if(event.event == 'close') {
-        _readyState = EventSourceReadyState.CLOSED;
-        _stateController.add(_readyState);
-      } else if (_readyState != EventSourceReadyState.OPEN) {
-        _readyState = EventSourceReadyState.OPEN;
-        _stateController.add(_readyState);
-      }
-      _lastEventId = event.id;
-    },
-        cancelOnError: false,
+    response.stream
+      .transform(_decoder)
+      .timeout(_timeout)
+      .listen(
+        (Event event) {
+          _streamController.add(event);
+          if(event.event == 'close') {
+            _readyState = EventSourceReadyState.CLOSED;
+            _stateController.add(_readyState);
+          } else if (_readyState != EventSourceReadyState.OPEN) {
+            _readyState = EventSourceReadyState.OPEN;
+            _stateController.add(_readyState);
+          }
+          _lastEventId = event.id;
+        },
+        cancelOnError: true,
         onError: (err) {
           if(_readyState != EventSourceReadyState.CLOSED) {
             _stateController.add(EventSourceReadyState.CONNECTING);
@@ -147,7 +151,8 @@ class EventSource extends Stream<Event> {
         onDone: () {
           _readyState = EventSourceReadyState.CLOSED;
           _stateController.add(_readyState);
-        });
+        }
+      );
   }
 
   /// Retries until a new connection is established. Uses exponential backoff.
