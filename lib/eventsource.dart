@@ -32,7 +32,6 @@ class EventSourceSubscriptionException extends Event implements Exception {
 
 /// An EventSource client that exposes a [Stream] of [Event]s.
 class EventSource extends Stream<Event> {
-  // interface attributes
 
   final Uri url;
 
@@ -102,6 +101,7 @@ class EventSource extends Stream<Event> {
     }
     _readyState = EventSourceReadyState.CONNECTING;
     _stateController.add(_readyState);
+
     var request = new http.Request("GET", url);
     request.headers["Cache-Control"] = "no-cache";
     request.headers["Accept"] = "text/event-stream";
@@ -112,6 +112,7 @@ class EventSource extends Stream<Event> {
       request.headers["Cookie"] = _cookies.map((c) => c.toString()).join('; ');
     }
     var response = await client.send(request);
+    
     if (response.statusCode != 200) {
       // server returned an error
       var bodyBytes = await response.stream.toBytes();
@@ -123,28 +124,33 @@ class EventSource extends Stream<Event> {
         _cookies.add(Cookie.fromSetCookieValue(response.headers[header]));
       }
     });
+
     _readyState = EventSourceReadyState.OPEN;
     _stateController.add(_readyState);
-    // start streaming the data
+
     response.stream
       .transform(_decoder)
       .timeout(_timeout)
       .listen(
         (Event event) {
-          _streamController.add(event);
-          if(event.event == 'close') {
-            _readyState = EventSourceReadyState.CLOSED;
-            _stateController.add(_readyState);
-          } else if (_readyState != EventSourceReadyState.OPEN) {
+          if (_readyState != EventSourceReadyState.OPEN) { 
             _readyState = EventSourceReadyState.OPEN;
             _stateController.add(_readyState);
           }
+          if (event.event == 'close') {
+            _readyState = EventSourceReadyState.CLOSED;
+            _stateController.add(_readyState);
+            _streamController.close();
+          } else {
+            _streamController.add(event);
+          }
           _lastEventId = event.id;
         },
-        cancelOnError: true,
+        cancelOnError: false,
         onError: (err) {
-          if(_readyState != EventSourceReadyState.CLOSED) {
+          if (_readyState != EventSourceReadyState.CLOSED) {
             _stateController.add(EventSourceReadyState.CONNECTING);
+            _streamController.addError(err);
             _retry(err);
           }
         },
@@ -157,15 +163,15 @@ class EventSource extends Stream<Event> {
 
   /// Retries until a new connection is established. Uses exponential backoff.
   Future _retry(dynamic e) async {
-    if(_readyState != EventSourceReadyState.CLOSED) {
-      // try reopening with exponential backoff
-      Duration backoff = _retryDelay;
-      while (true) {
-        await new Future.delayed(backoff);
-        try {
-          await _start();
-          break;
-        } catch (error) {
+    Duration backoff = _retryDelay;
+
+    while (true) {
+      await new Future.delayed(backoff);
+      try {
+        await _start();
+        break;
+      } catch (error) {
+        if (_readyState != EventSourceReadyState.CLOSED) {
           _streamController.addError(error);
           backoff *= 2;
         }
