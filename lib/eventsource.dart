@@ -133,7 +133,7 @@ class EventSource extends Stream<Event> {
       .timeout(_timeout)
       .listen(
         (Event event) {
-          if (_readyState != EventSourceReadyState.OPEN) { 
+          if (_readyState == EventSourceReadyState.CONNECTING) { 
             _readyState = EventSourceReadyState.OPEN;
             _stateController.add(_readyState);
           }
@@ -141,7 +141,7 @@ class EventSource extends Stream<Event> {
             _readyState = EventSourceReadyState.CLOSED;
             _stateController.add(_readyState);
             _streamController.close();
-          } else {
+          } else if (_readyState != EventSourceReadyState.CLOSED) {
             _streamController.add(event);
           }
           _lastEventId = event.id;
