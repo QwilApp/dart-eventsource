@@ -17,31 +17,33 @@ class EventSourceDecoder extends StreamTransformerBase<List<int>, Event> {
     controller = new StreamController(onListen: () {
       // the event we are currently building
       Event currentEvent = new Event();
-      // the regexes we will use later
-      RegExp lineRegex = new RegExp(r"^([^:]*)(?::)?(?: )?(.*)?$");
-      RegExp removeEndingNewlineRegex = new RegExp(r"^((?:.|\n)*)\n$");
+
       // This stream will receive chunks of data that is not necessarily a
       // single event. So we build events on the fly and broadcast the event as
       // soon as we encounter a double newline, then we start a new one.
       stream
-          .transform(new Utf8Decoder())
-          .transform(new LineSplitter())
-          .listen((String line) {
+        .transform(new Utf8Decoder())
+        .transform(new LineSplitter())
+        .listen((String line) {
+
         if (line.isEmpty) {
           // event is done
           // strip ending newline from data
           if (currentEvent.data != null) {
-            var match = removeEndingNewlineRegex.firstMatch(currentEvent.data);
-            currentEvent.data = match.group(1);
+            var idx = currentEvent.data.lastIndexOf("\n");
+
+            currentEvent.data = idx != -1 ? currentEvent.data.substring(0, idx) : currentEvent.data;            
           }
           controller.add(currentEvent);
           currentEvent = new Event();
           return;
         }
-        // match the line prefix and the value using the regex
-        Match match = lineRegex.firstMatch(line);
-        String field = match.group(1);
-        String value = match.group(2) ?? "";
+        // match the line prefix and the value
+        var delimiterIdx = line.indexOf(": ");
+
+        String field = line.substring(0, delimiterIdx);
+        String value = line.substring(delimiterIdx + 1).trim() ?? "";
+
         if (field.isEmpty) {
           // lines starting with a colon are to be ignored
           return;
