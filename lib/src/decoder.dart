@@ -30,7 +30,7 @@ class EventSourceDecoder extends StreamTransformerBase<List<int>, Event> {
           // event is done
           // strip ending newline from data
           if (currentEvent.data != null) {
-            var idx = currentEvent.data.lastIndexOf("\n");
+            final int idx = currentEvent.data.lastIndexOf("\n");
 
             currentEvent.data = idx != -1 ? currentEvent.data.substring(0, idx) : currentEvent.data;            
           }
@@ -39,30 +39,27 @@ class EventSourceDecoder extends StreamTransformerBase<List<int>, Event> {
           return;
         }
         // match the line prefix and the value
-        var delimiterIdx = line.indexOf(": ");
 
-        String field = line.substring(0, delimiterIdx);
-        String value = line.substring(delimiterIdx + 1).trim() ?? "";
-
-        if (field.isEmpty) {
-          // lines starting with a colon are to be ignored
-          return;
+        if (line.startsWith("event:")) {
+          currentEvent.event = line.substring(6).trim();
         }
-        switch (field) {
-          case "event":
-            currentEvent.event = value;
-            break;
-          case "data":
-            currentEvent.data = (currentEvent.data ?? "") + value + "\n";
-            break;
-          case "id":
-            currentEvent.id = value;
-            break;
-          case "retry":
-            if (retryIndicator != null) {
-              retryIndicator(new Duration(milliseconds: int.parse(value)));
-            }
-            break;
+        else if (line.startsWith("data:")) {
+          final String value = line.substring(5).trim() ?? "";
+
+          currentEvent.data = (currentEvent.data ?? "") + value + "\n";
+        }
+        else if (line.startsWith("id:")) {
+          currentEvent.id = line.substring(3).trim();
+        }
+        else if (line.startsWith("retry:")) {
+          final String value = line.substring(6).trim();
+
+          if (retryIndicator != null) {
+            retryIndicator(new Duration(milliseconds: int.parse(value)));
+          }
+        }
+        else {
+          return;
         }
       });
     });
