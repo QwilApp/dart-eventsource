@@ -63,6 +63,7 @@ class EventSource extends Stream<Event> {
       {http.Client client, String lastEventId,
         Map<String, dynamic> query, List<Cookie> cookies, Duration timeout}) async {
     // parameter initialization
+
     String queryString = null;
     if(query != null && query.length > 0) {
       queryString = query.keys.map((k) => '$k=${query[k].toString()}').join('&');
@@ -71,13 +72,11 @@ class EventSource extends Stream<Event> {
     client = client ?? new http.Client();
     lastEventId = lastEventId ?? "";
     EventSource es = new EventSource._internal(url, client, lastEventId, cookies ?? List(), timeout ?? Duration(seconds: 5));
-    try {
-      await es._start();
-    } catch (error) {
-      es._retry(error);
-    }
+    
+    await es._start();
+
     return es;
-  }
+  }   
 
   EventSource._internal(this.url, this.client, this._lastEventId, this._cookies, this._timeout) {
     _decoder = new EventSourceDecoder(retryIndicator: _updateRetryDelay);
@@ -117,6 +116,7 @@ class EventSource extends Stream<Event> {
       // server returned an error
       var bodyBytes = await response.stream.toBytes();
       String body = _encodingForHeaders(response.headers).decode(bodyBytes);
+
       throw new EventSourceSubscriptionException(response.statusCode, body);
     }
     response.headers.keys.forEach((header) {
@@ -146,12 +146,12 @@ class EventSource extends Stream<Event> {
           }
           _lastEventId = event.id;
         },
-        cancelOnError: false,
-        onError: (err) {
-          if (_readyState != EventSourceReadyState.CLOSED) {
-            _stateController.add(EventSourceReadyState.CONNECTING);
-            _streamController.addError(err);
-            _retry(err);
+        cancelOnError: true,
+        onError: (error) {
+           if (_readyState != EventSourceReadyState.CLOSED) {
+            _stateController.add(EventSourceReadyState.CLOSED);
+            _streamController.addError(error);
+            _streamController.close();
           }
         },
         onDone: () {
